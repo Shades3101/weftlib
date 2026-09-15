@@ -1,6 +1,6 @@
 # webspec — Build Progress
 
-**Last updated:** 2026-09-15 · **Current phase:** 4 of 6 complete — ClayHome wired, zero regressions
+**Last updated:** 2026-09-15 · **Current phase:** 4b of 6 complete — rung 2 live-proven
 
 > **New session? Read this file first.** It is the source of truth for where the
 > build stands. The approved plan lives at
@@ -14,7 +14,7 @@
 - [x] **2. Extract from ClayHome** — SSRF guard, URL helpers, neutral DTOs, ports, HTML extraction — done 2026-09-15
 - [x] **3. Keyless platform modules** — GitHub, RSS/Atom, YouTube, Reader, SearXNG, Brave — done 2026-09-15
 - [x] **4. Wire ClayHome** — generic logic delegated, 466 tests unchanged — done 2026-09-15
-- [ ] **4b. Rung 2 browser renderer** — Playwright behind the existing `BrowserProvider` ABC
+- [x] **4b. Rung 2 browser renderer** — Playwright, escalation wired, live-proven — done 2026-09-15
 - [ ] **5. Wire JARVIS** — new `jarvis-tools-web` plugin, `ctx.http` transport, ADR
 - [ ] **6. Platform notes** — distil Agent-Reach's endpoint documentation
 
@@ -24,40 +24,51 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Right now
 
-**Step 4 is complete and verified.** ClayHome depends on `webspec` and runs its
-code in production paths. **466 passed, 10 skipped — byte-identical to the
-baseline taken before any change.** ruff clean across `packages/` and `apps/`.
-Net effect on ClayHome: **210 lines deleted, 90 added.**
+**Step 4b is complete and live-proven.** ClayHome: **473 passed, 10 skipped**
+(466 baseline + 7 new). ruff clean.
 
-Confirmed by introspection rather than assumption — `normalize_url`, `url_hash`,
-`host_of`, `root_url` and `is_public_address` all resolve to `webspec.safety.*`,
-and the fetcher's `_extract` calls `webspec.extract.extract_content`.
+`PlaywrightBrowserProvider` fills the `BrowserProvider` slot that had been
+declared-but-empty since ClayHome's M3, and `HttpPageFetcher._maybe_escalate`
+consults `webspec.extract.should_escalate` after each HTTP attempt.
 
-### A baseline worth recording
+### Proven against a real browser, not fixtures
 
-The first run of ClayHome's suite gave 364 passed with **102 errors**. Those
-were not regressions: its Postgres was simply not running. Starting
-`clayhome-postgres-1` and `clayhome-redis-1` gave the true baseline of 466
-passed, and every later comparison used that. Comparing against the broken run
-would have hidden real breakage in the noise.
+A local JS-only fixture page, served over loopback:
 
-### What deliberately did *not* move
+| | Result |
+|---|---|
+| Rung 1 (HTTP) | **0 characters** of text from 6,666 bytes |
+| `should_escalate` | `True` — reason `empty_body` |
+| Rung 2 (Chromium) | **481 characters**, title parsed, heading present |
 
-- **`resolve_public_target` stays async in ClayHome.** webspec's is sync, and
-  calling it from the fetcher would block the event loop on every DNS lookup —
-  a genuine regression under concurrency that no test would have caught. Only
-  the pure parts (`validate_url_shape`, `is_public_address`) are shared.
-- **`registrable_domain`, `is_aggregator`, `is_plausible_company_domain`,
-  `same_site`** stay local: they need `tldextract` plus curated aggregator and
-  free-mail lists, which is prospecting knowledge.
-- **The `allow_private` escape hatch** stays, mapped onto webspec's named-host
-  allowlist.
+### Guards at this rung
 
-### ClayHome gained something
+- **The SSRF check runs again inside `render()`.** A browser follows redirects
+  the first check never saw. Tested: a metadata-endpoint URL is refused and no
+  browser is ever launched.
+- **The size cap moves to the rendered result** — there is no wire to enforce
+  it on at this rung.
+- **Concurrency is bounded separately** by a new `browser_max_concurrency`
+  setting. Browsers are memory-bound; the limit that keeps HTTP healthy will
+  exhaust a machine here.
+- **A failed render keeps the HTTP result**, so a timeout cannot lose the
+  status already obtained.
+- `image`, `media` and `font` requests are aborted — bandwidth for no text.
 
-Legacy IPv4 literals — `127.1`, `0x7f000001`, `2130706433`, `0xA9FEA9FE` — are
-now rejected at parse time. Previously they were caught only because DNS
-resolution returned a private address.
+### The test that matters most
+
+`test_good_page_is_not_escalated` asserts on **browser launch count**, not on
+output. A pipeline that renders every page passes every pass/fail test and is
+ruinous at volume; the only way that regression is visible is by counting
+launches.
+
+### A misreading worth recording
+
+`ResearchBudget.max_browser_sessions` already existed and looked like a
+concurrency limit. It is not — it is how many renders one research *job* may
+spend, enforced at call sites by the budget service. Reusing it would have
+conflated a per-job quota with a process-wide concurrency bound. Hence the new,
+separately-named setting.
 
 ## Decisions locked
 
