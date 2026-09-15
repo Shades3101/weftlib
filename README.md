@@ -1,14 +1,14 @@
-# webcore
+# webspec
 
 Web access as pure logic. Builds request descriptions, parses responses,
 **performs no I/O**.
 
 ```python
-from webcore.platforms import youtube
+from webspec.platforms import youtube
 
 request = youtube.transcript_request("dQw4w9WgXcQ")   # a description
 response = my_http_client.send(request)                # caller executes
-transcript = youtube.parse_transcript(response)        # back to webcore
+transcript = youtube.parse_transcript(response)        # back to webspec
 ```
 
 ## Why no I/O
@@ -27,12 +27,12 @@ So the library owns the *logic* and each caller owns the *pipe*. The side
 effect is portability: no HTTP client, no async framework, no pydantic, no
 version conflicts with anything.
 
-The single exception is `webcore.safety`, which resolves DNS — that is the
+The single exception is `webspec.safety`, which resolves DNS — that is the
 point of an SSRF check. It is a pure function returning a verdict.
 
 ## Identity
 
-`webcore` owns **none**. Credentials are passed in by the caller, never stored
+`webspec` owns **none**. Credentials are passed in by the caller, never stored
 or managed here. JARVIS supplies a user's token; ClayHome supplies its own app
 key or nothing at all. OAuth flows, token storage, and user accounts live in
 the consuming application.
@@ -42,7 +42,7 @@ The first version is entirely keyless.
 ## Install
 
 ```toml
-webcore = { path = "../webcore", editable = true }
+webspec = { path = "../webspec", editable = true }
 ```
 
 Python 3.12. The upper pin (`<3.13`) matches JARVIS; nothing here requires it.

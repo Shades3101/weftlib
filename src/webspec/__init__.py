@@ -1,4 +1,4 @@
-"""webcore — web access as pure logic.
+"""webspec — web access as pure logic.
 
 This package performs **no I/O**. It builds request descriptions and parses
 response payloads; the caller executes them with whatever HTTP client it
@@ -11,7 +11,7 @@ fetched anything itself could not be imported there at all. The same rule makes
 the package trivially portable: it has no opinion about sync vs async, about
 your HTTP client, cache, or framework.
 
-The one deliberate exception is :mod:`webcore.safety`, which resolves DNS —
+The one deliberate exception is :mod:`webspec.safety`, which resolves DNS —
 that *is* the SSRF check. It is a pure function returning a verdict, exposed so
 a transport can consult it before it connects.
 """
