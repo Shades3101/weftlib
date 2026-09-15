@@ -1,6 +1,6 @@
 # webspec — Build Progress
 
-**Last updated:** 2026-09-15 · **Current phase:** 2 of 6 complete — safety, ports and extraction
+**Last updated:** 2026-09-15 · **Current phase:** 3 of 6 complete — platform modules, live-verified
 
 > **New session? Read this file first.** It is the source of truth for where the
 > build stands. The approved plan lives at
@@ -12,7 +12,7 @@
 
 - [x] **1. Repo scaffold** — pyproject, src layout, py.typed, tooling — done 2026-09-15
 - [x] **2. Extract from ClayHome** — SSRF guard, URL helpers, neutral DTOs, ports, HTML extraction — done 2026-09-15
-- [ ] **3. Keyless platform modules** — YouTube, RSS, GitHub, SearXNG search
+- [x] **3. Keyless platform modules** — GitHub, RSS/Atom, YouTube, Reader, SearXNG, Brave — done 2026-09-15
 - [ ] **4. Wire ClayHome** — its fetcher becomes a `webspec` transport
 - [ ] **4b. Rung 2 browser renderer** — Playwright behind the existing `BrowserProvider` ABC
 - [ ] **5. Wire JARVIS** — new `jarvis-tools-web` plugin, `ctx.http` transport, ADR
@@ -24,51 +24,55 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Right now
 
-**Step 2 is complete and verified.** 55 tests pass; `ruff` and `mypy --strict`
-are clean across 12 source files.
+**Step 3 is complete and verified.** 102 tests pass; `ruff` and `mypy --strict`
+clean across 20 source files. Six platform modules exist, each a
+request-builder/response-parser pair with no I/O:
 
-What now exists, all of it pure logic with no I/O:
+`github` · `rss` (RSS 2.0 + Atom) · `youtube` · `reader` (Jina, rung 1.5) ·
+`search.searxng` · `search.brave`
 
-- `safety/ssrf.py` — the guard, ported from ClayHome `core/net.py`. Rejects
-  non-HTTP schemes, URL credentials, odd ports, every private/loopback/
-  link-local/reserved literal, named internal hosts, and — after DNS — any host
-  where *any* resolved address is non-public.
-- `safety/urls.py` — `normalize_url`, `url_hash`, `host_of`, `root_url`.
-- `ports/dto.py` — `HttpRequest`, `HttpResponse`, `FetchedPage`, `SearchRequest`,
-  `SearchHit`, `SearchResponse`, `FetchMethod`.
-- `ports/protocols.py` — `Transport`, `AsyncTransport`, `Renderer`, `Cache`,
-  as `Protocol`s so an existing class satisfies them by shape.
-- `extract/html.py` — title, readable text, declared language via selectolax.
-- `extract/antibot.py` — challenge-page detection.
-- `extract/escalation.py` — `should_escalate()`, the decision to pay for a
-  higher rung.
+### Verified against the real endpoints, not just fixtures
 
-### Three deliberate improvements on the source material
+A one-off script sent the built requests with `urllib` and fed the real
+responses back to the parsers:
 
-1. **Legacy IPv4 literals are rejected without DNS.** ClayHome catches `127.1`,
-   `0x7f000001` and `2130706433` only because resolution returns 127.0.0.1;
-   webspec also parses them with `inet_aton` at shape-check time, which is what
-   Agent-Reach's weaker guard did better. Both paths now hold.
-2. **The internal-endpoint exemption is a host allowlist, not a boolean.**
-   ClayHome has `fetch_allow_private_networks`, which its own
-   `validate_runtime()` refuses to allow in production — correctly, because it
-   disables the guard wholesale. webspec takes named hosts instead, so a
-   self-hosted SearXNG is reachable while everything else stays guarded. Tested
-   explicitly: the exemption does not leak to `127.0.0.1` or to
-   `metadata.google.internal`, and it still enforces scheme and credential
-   rules.
-3. **The escalation decision is extracted and unit-tested.** It refuses to
-   escalate on an honest 404 or a transport error, and distinguishes a
-   JavaScript shell (little text, many bytes) from a genuinely small page.
+| Endpoint | Result |
+|---|---|
+| GitHub repo API | ✅ parsed `astral-sh/ruff` — 49,632 stars, Rust, MIT, topics, rate-limit headers |
+| RSS 2.0 (Hacker News) | ✅ 20 entries with correct RFC-822 dates |
+| Atom (GitHub Blog) | ✅ 10 entries, alternate link preferred over `rel=self` |
+| YouTube oEmbed | ✅ title and author for a real video |
+| YouTube watch page | ❌ **HTTP 429 on three consecutive attempts** |
 
-### One boundary drawn differently from the plan
+**The YouTube transcript path does not work from this machine.** YouTube blocks
+unauthenticated watch-page reads from cloud IP ranges. Metadata via oEmbed is
+unaffected.
 
-The plan said to port `core/urls.py`. Its public-suffix helpers —
-`registrable_domain`, `is_aggregator`, `is_plausible_company_domain`,
-`same_site` — **stayed in ClayHome**. They need `tldextract` plus curated lists
-of aggregator and free-mail domains, which is prospecting knowledge rather than
-web access. Porting them would have added a dependency to a package that
-otherwise needs none, and put ClayHome's business rules in a shared library.
+This is recorded rather than fixed. Getting past it needs cookies, a PO token,
+and ongoing maintenance as the checks change — which is `yt-dlp`'s entire job.
+**For transcripts at any volume, shell out to yt-dlp.** The module stays for the
+case of one transcript from an unblocked IP, and it at least fails loudly: a 429
+raises `ParseError` rather than returning an empty tuple, so "blocked" is never
+recorded as "this video has no captions".
+
+### A deviation from the plan, deliberately
+
+The plan said to split ClayHome's five paid search providers into request-build
+and parse halves. **I did not.** Those providers work and are tested; moving
+them now would risk ClayHome regressions to gain nothing this step. Instead
+`search/` has SearXNG — the actual gap, since JARVIS's DuckDuckGo scraping is
+already blocked — plus Brave, to prove the shape generalises to a keyed backend.
+The remaining four can move later, incrementally, if there is ever a reason.
+
+### Two things worth knowing about the code
+
+- **`reader.reader_request()` validates its target before building the URL.**
+  Without that it is an SSRF laundering service: the caller's own guard only
+  ever sees `r.jina.ai` and would happily pass along a request asking Jina to
+  fetch `169.254.169.254` on our behalf. Tested.
+- **`searxng.parse_search()` treats an HTML response as a configuration error**,
+  not as zero results. JSON output is off by default in SearXNG, and the naive
+  reading of that is an empty result set forever.
 
 ## Decisions locked
 
