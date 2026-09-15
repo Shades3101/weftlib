@@ -1,6 +1,6 @@
 # webspec — Build Progress
 
-**Last updated:** 2026-09-15 · **Current phase:** 4b of 6 complete — rung 2 live-proven
+**Last updated:** 2026-09-15 · **Current phase:** complete — all 6 steps done, both consumers wired
 
 > **New session? Read this file first.** It is the source of truth for where the
 > build stands. The approved plan lives at
@@ -15,8 +15,8 @@
 - [x] **3. Keyless platform modules** — GitHub, RSS/Atom, YouTube, Reader, SearXNG, Brave — done 2026-09-15
 - [x] **4. Wire ClayHome** — generic logic delegated, 466 tests unchanged — done 2026-09-15
 - [x] **4b. Rung 2 browser renderer** — Playwright, escalation wired, live-proven — done 2026-09-15
-- [ ] **5. Wire JARVIS** — new `jarvis-tools-web` plugin, `ctx.http` transport, ADR
-- [ ] **6. Platform notes** — distil Agent-Reach's endpoint documentation
+- [x] **5. Wire JARVIS** — `jarvis-tools-web`, ADR 0020, 868 tests pass — done 2026-09-15
+- [x] **6. Platform notes** — `docs/platform-notes.md` — done 2026-09-15
 
 Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
@@ -24,51 +24,48 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Right now
 
-**Step 4b is complete and live-proven.** ClayHome: **473 passed, 10 skipped**
-(466 baseline + 7 new). ruff clean.
+**All six steps are complete.** Both consumers run on `webspec`.
 
-`PlaywrightBrowserProvider` fills the `BrowserProvider` slot that had been
-declared-but-empty since ClayHome's M3, and `HttpPageFetcher._maybe_escalate`
-consults `webspec.extract.should_escalate` after each HTTP attempt.
+| | Tests | Lint / types |
+|---|---|---|
+| webspec | 102 pass | ruff clean, mypy --strict clean (20 files) |
+| ClayHome | 473 pass, 10 skipped | ruff clean |
+| JARVIS | 868 pass, 59 skipped | ruff clean, mypy clean, 4/4 import contracts kept |
 
-### Proven against a real browser, not fixtures
+ClayHome's baseline before any change was 466 — the 7 extra are the new rung-2
+escalation tests. JARVIS's was 854; the 14 extra are the new web tools'.
 
-A local JS-only fixture page, served over loopback:
+### Step 5: the JARVIS plugin
 
-| | Result |
-|---|---|
-| Rung 1 (HTTP) | **0 characters** of text from 6,666 bytes |
-| `should_escalate` | `True` — reason `empty_body` |
-| Rung 2 (Chromium) | **481 characters**, title parsed, heading present |
+`plugins/jarvis-tools-web` provides `web.read` (v1.0.0) and `web.search`
+(v2.0.0), registered through the same entry-point seam a third party would use.
+ADR 0020 records the reasoning. `web.search` replaces
+`jarvis_tools_core.WebSearchTool`, whose DuckDuckGo scraping its own comment
+already flagged as being answered with a 202 and a JS challenge.
 
-### Guards at this rung
+**The ambient-authority scan passes unchanged**, and `lint-imports` keeps all
+four contracts including *"Agents have no direct egress — all authority arrives
+via ToolContext"*. That is the whole no-I/O design paying off: a library that
+opened its own sockets could not have been imported there at all.
 
-- **The SSRF check runs again inside `render()`.** A browser follows redirects
-  the first check never saw. Tested: a metadata-endpoint URL is refused and no
-  browser is ever launched.
-- **The size cap moves to the rendered result** — there is no wire to enforce
-  it on at this rung.
-- **Concurrency is bounded separately** by a new `browser_max_concurrency`
-  setting. Browsers are memory-bound; the limit that keeps HTTP healthy will
-  exhaust a machine here.
-- **A failed render keeps the HTTP result**, so a timeout cannot lose the
-  status already obtained.
-- `image`, `media` and `font` requests are aborted — bandwidth for no text.
+Each tool allowlists **one host** — `r.jina.ai` and `searxng` — which is broad
+reach through a narrow grant.
 
-### The test that matters most
+### The bug this design nearly introduced
 
-`test_good_page_is_not_escalated` asserts on **browser launch count**, not on
-output. A pipeline that renders every page passes every pass/fail test and is
-ruinous at volume; the only way that regression is visible is by counting
-launches.
+`web.read` asks a third party to fetch a URL. The egress policy only ever sees
+`r.jina.ai`, so it *cannot* catch a request to fetch `169.254.169.254` by
+proxy — the tool would have been an SSRF laundering service.
+`reader_request()` validates the target before building the request, and the
+tool returns `web.unsafe_target` with `ExternalState.NOT_APPLICABLE`. Tested
+for the metadata endpoint, loopback, internal hostnames and `file://`, each
+asserting that **nothing left the process**.
 
-### A misreading worth recording
+### Step 6: platform notes
 
-`ResearchBudget.max_browser_sessions` already existed and looked like a
-concurrency limit. It is not — it is how many renders one research *job* may
-spend, enforced at call sites by the budget service. Reusing it would have
-conflated a per-job quota with a process-wide concurrency bound. Hence the new,
-separately-named setting.
+`docs/platform-notes.md` — what works per platform, what does not, and why,
+with live checks dated. Agent-Reach's endpoint research distilled; its code
+deliberately not ported.
 
 ## Decisions locked
 
@@ -91,8 +88,12 @@ separately-named setting.
 
 ## Not yet true
 
-- Nothing has made a real network request through this library. Every test
-  injects a fake resolver or a fixture string.
+Stated plainly, because a PROGRESS file that only lists wins is not useful.
+
+- **webspec's own suite still makes no network request.** Every test injects a
+  fake resolver or a fixture. The live checks were one-off scripts, recorded
+  above but not automated — nothing will catch it when an endpoint's shape
+  changes.
 - ClayHome and JARVIS are untouched; neither depends on `webspec` yet.
 - The name `webspec` is still the placeholder from the plan. Renaming is
   cheapest now, before either consumer imports it.
