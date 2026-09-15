@@ -1,6 +1,6 @@
 # webspec — Build Progress
 
-**Last updated:** 2026-09-15 · **Current phase:** 3 of 6 complete — platform modules, live-verified
+**Last updated:** 2026-09-15 · **Current phase:** 4 of 6 complete — ClayHome wired, zero regressions
 
 > **New session? Read this file first.** It is the source of truth for where the
 > build stands. The approved plan lives at
@@ -13,7 +13,7 @@
 - [x] **1. Repo scaffold** — pyproject, src layout, py.typed, tooling — done 2026-09-15
 - [x] **2. Extract from ClayHome** — SSRF guard, URL helpers, neutral DTOs, ports, HTML extraction — done 2026-09-15
 - [x] **3. Keyless platform modules** — GitHub, RSS/Atom, YouTube, Reader, SearXNG, Brave — done 2026-09-15
-- [ ] **4. Wire ClayHome** — its fetcher becomes a `webspec` transport
+- [x] **4. Wire ClayHome** — generic logic delegated, 466 tests unchanged — done 2026-09-15
 - [ ] **4b. Rung 2 browser renderer** — Playwright behind the existing `BrowserProvider` ABC
 - [ ] **5. Wire JARVIS** — new `jarvis-tools-web` plugin, `ctx.http` transport, ADR
 - [ ] **6. Platform notes** — distil Agent-Reach's endpoint documentation
@@ -24,55 +24,40 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Right now
 
-**Step 3 is complete and verified.** 102 tests pass; `ruff` and `mypy --strict`
-clean across 20 source files. Six platform modules exist, each a
-request-builder/response-parser pair with no I/O:
+**Step 4 is complete and verified.** ClayHome depends on `webspec` and runs its
+code in production paths. **466 passed, 10 skipped — byte-identical to the
+baseline taken before any change.** ruff clean across `packages/` and `apps/`.
+Net effect on ClayHome: **210 lines deleted, 90 added.**
 
-`github` · `rss` (RSS 2.0 + Atom) · `youtube` · `reader` (Jina, rung 1.5) ·
-`search.searxng` · `search.brave`
+Confirmed by introspection rather than assumption — `normalize_url`, `url_hash`,
+`host_of`, `root_url` and `is_public_address` all resolve to `webspec.safety.*`,
+and the fetcher's `_extract` calls `webspec.extract.extract_content`.
 
-### Verified against the real endpoints, not just fixtures
+### A baseline worth recording
 
-A one-off script sent the built requests with `urllib` and fed the real
-responses back to the parsers:
+The first run of ClayHome's suite gave 364 passed with **102 errors**. Those
+were not regressions: its Postgres was simply not running. Starting
+`clayhome-postgres-1` and `clayhome-redis-1` gave the true baseline of 466
+passed, and every later comparison used that. Comparing against the broken run
+would have hidden real breakage in the noise.
 
-| Endpoint | Result |
-|---|---|
-| GitHub repo API | ✅ parsed `astral-sh/ruff` — 49,632 stars, Rust, MIT, topics, rate-limit headers |
-| RSS 2.0 (Hacker News) | ✅ 20 entries with correct RFC-822 dates |
-| Atom (GitHub Blog) | ✅ 10 entries, alternate link preferred over `rel=self` |
-| YouTube oEmbed | ✅ title and author for a real video |
-| YouTube watch page | ❌ **HTTP 429 on three consecutive attempts** |
+### What deliberately did *not* move
 
-**The YouTube transcript path does not work from this machine.** YouTube blocks
-unauthenticated watch-page reads from cloud IP ranges. Metadata via oEmbed is
-unaffected.
+- **`resolve_public_target` stays async in ClayHome.** webspec's is sync, and
+  calling it from the fetcher would block the event loop on every DNS lookup —
+  a genuine regression under concurrency that no test would have caught. Only
+  the pure parts (`validate_url_shape`, `is_public_address`) are shared.
+- **`registrable_domain`, `is_aggregator`, `is_plausible_company_domain`,
+  `same_site`** stay local: they need `tldextract` plus curated aggregator and
+  free-mail lists, which is prospecting knowledge.
+- **The `allow_private` escape hatch** stays, mapped onto webspec's named-host
+  allowlist.
 
-This is recorded rather than fixed. Getting past it needs cookies, a PO token,
-and ongoing maintenance as the checks change — which is `yt-dlp`'s entire job.
-**For transcripts at any volume, shell out to yt-dlp.** The module stays for the
-case of one transcript from an unblocked IP, and it at least fails loudly: a 429
-raises `ParseError` rather than returning an empty tuple, so "blocked" is never
-recorded as "this video has no captions".
+### ClayHome gained something
 
-### A deviation from the plan, deliberately
-
-The plan said to split ClayHome's five paid search providers into request-build
-and parse halves. **I did not.** Those providers work and are tested; moving
-them now would risk ClayHome regressions to gain nothing this step. Instead
-`search/` has SearXNG — the actual gap, since JARVIS's DuckDuckGo scraping is
-already blocked — plus Brave, to prove the shape generalises to a keyed backend.
-The remaining four can move later, incrementally, if there is ever a reason.
-
-### Two things worth knowing about the code
-
-- **`reader.reader_request()` validates its target before building the URL.**
-  Without that it is an SSRF laundering service: the caller's own guard only
-  ever sees `r.jina.ai` and would happily pass along a request asking Jina to
-  fetch `169.254.169.254` on our behalf. Tested.
-- **`searxng.parse_search()` treats an HTML response as a configuration error**,
-  not as zero results. JSON output is off by default in SearXNG, and the naive
-  reading of that is an empty result set forever.
+Legacy IPv4 literals — `127.1`, `0x7f000001`, `2130706433`, `0xA9FEA9FE` — are
+now rejected at parse time. Previously they were caught only because DNS
+resolution returned a private address.
 
 ## Decisions locked
 
