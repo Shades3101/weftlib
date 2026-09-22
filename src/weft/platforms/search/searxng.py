@@ -12,7 +12,7 @@ Two operational notes that will otherwise cost an afternoon:
    in the instance's ``settings.yml`` or every request returns HTML.
 2. **The instance is on a private address**, which the SSRF guard rejects by
    design. Pass its hostname in ``internal_allowlist`` — see
-   :func:`webspec.safety.validate_url_shape`.
+   :func:`weft.safety.validate_url_shape`.
 
 At volume, remember SearXNG scrapes upstream engines. It inherits their rate
 limiting; it does not escape it.
@@ -22,13 +22,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from webspec.platforms._shared import (
+from weft.platforms._shared import (
     DEFAULT_USER_AGENT,
     ParseError,
     json_body,
     require_ok,
 )
-from webspec.ports.dto import HttpRequest, HttpResponse, SearchHit, SearchRequest, SearchResponse
+from weft.ports.dto import HttpRequest, HttpResponse, SearchHit, SearchRequest, SearchResponse
 
 PROVIDER = "searxng"
 

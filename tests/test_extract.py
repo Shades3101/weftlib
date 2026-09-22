@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from webspec.extract import (
+from weft.extract import (
     EscalationReason,
     extract_content,
     is_challenge_page,
     should_escalate,
 )
-from webspec.ports import FetchedPage
+from weft.ports import FetchedPage
 
 REAL_PAGE = """
 <html lang="en-GB">

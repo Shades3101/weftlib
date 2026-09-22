@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from webspec.safety import host_of, normalize_url, root_url, url_hash
+from weft.safety import host_of, normalize_url, root_url, url_hash
 
 
 @pytest.mark.parametrize(

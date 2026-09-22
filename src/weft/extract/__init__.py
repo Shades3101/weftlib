@@ -5,13 +5,13 @@ more expensive rung — because that judgement is content analysis, and keeping
 it here makes it testable without a network.
 """
 
-from webspec.extract.antibot import is_challenge_page
-from webspec.extract.escalation import (
+from weft.extract.antibot import is_challenge_page
+from weft.extract.escalation import (
     EscalationReason,
     EscalationVerdict,
     should_escalate,
 )
-from webspec.extract.html import ExtractedContent, extract_content, visible_text_length
+from weft.extract.html import ExtractedContent, extract_content, visible_text_length
 
 __all__ = [
     "EscalationReason",

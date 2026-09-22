@@ -13,7 +13,7 @@ from typing import Any
 #: A plain, honest identifier. Nothing here pretends to be a browser: the
 #: package never defeats bot protection, and a user-agent that lies is the
 #: first step toward doing so.
-DEFAULT_USER_AGENT = "webspec/0.1 (+https://github.com/Shades3101/webspec)"
+DEFAULT_USER_AGENT = "weft/0.1 (+https://github.com/Shades3101/weft)"
 
 
 class ParseError(ValueError):

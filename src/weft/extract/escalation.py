@@ -27,8 +27,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from webspec.extract.antibot import is_challenge_page
-from webspec.ports.dto import FetchedPage
+from weft.extract.antibot import is_challenge_page
+from weft.ports.dto import FetchedPage
 
 #: Below this many readable characters, a 2xx HTML response is judged a shell
 #: rather than a page. Chosen well under a short real article and well above a

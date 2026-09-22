@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from conftest import response
 
-from webspec.platforms import ParseError, github
+from weft.platforms import ParseError, github
 
 REPO = {
     "full_name": "acme/widget",

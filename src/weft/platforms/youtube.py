@@ -36,13 +36,13 @@ import re
 from dataclasses import dataclass
 from urllib.parse import parse_qs, urlsplit
 
-from webspec.platforms._shared import (
+from weft.platforms._shared import (
     DEFAULT_USER_AGENT,
     ParseError,
     json_body,
     require_ok,
 )
-from webspec.ports.dto import HttpRequest, HttpResponse
+from weft.ports.dto import HttpRequest, HttpResponse
 
 WATCH_URL = "https://www.youtube.com/watch"
 OEMBED_URL = "https://www.youtube.com/oembed"
@@ -226,6 +226,21 @@ def parse_transcript(
     language_code: str,
 ) -> Transcript:
     require_ok(response.status, what="YouTube transcript")
+
+    # YouTube signals "I will not serve you these captions" as 200 with a
+    # zero-length body, not as a 4xx. Reported live on 2026-09-22 against a
+    # video whose tracks had just been listed successfully on the watch page,
+    # so it is a refusal to serve, not a video without captions. Left as a
+    # distinct error because "empty body" is diagnosable — it means the caller
+    # needs a different egress IP — whereas the JSON decode failure it would
+    # otherwise become sends you looking for a parser bug that is not there.
+    if not response.body.strip():
+        raise ParseError(
+            "YouTube returned an empty transcript body (200 with no content). "
+            "The track was listed but not served — typically an IP-based block; "
+            "try a residential egress or a caption-bearing fallback."
+        )
+
     data = json_body(response.body, what="YouTube transcript")
     if not isinstance(data, dict):
         raise ParseError("YouTube transcript response was not an object")

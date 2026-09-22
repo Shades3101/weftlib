@@ -7,16 +7,18 @@ wrong answer when it breaks, this returns your cloud credentials.
 from __future__ import annotations
 
 import socket
+from collections.abc import Callable
+from typing import Any, NoReturn
 
 import pytest
 
-from webspec.safety import UnsafeURLError, resolve_public_target, validate_url_shape
+from weft.safety import UnsafeURLError, resolve_public_target, validate_url_shape
 
 
-def _resolver(*addresses: str):
+def _resolver(*addresses: str) -> Callable[..., list[Any]]:
     """A fake getaddrinfo returning fixed addresses, so DNS never runs."""
 
-    def fake(host, port, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+    def fake(host: str, port: int, *args: Any, **kwargs: Any) -> list[Any]:
         return [
             (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", (addr, port))
             for addr in addresses
@@ -115,7 +117,7 @@ def test_public_resolution_passes() -> None:
 
 
 def test_unresolvable_host_is_rejected() -> None:
-    def boom(*args, **kwargs):  # noqa: ANN002, ANN003
+    def boom(*args: Any, **kwargs: Any) -> NoReturn:
         raise socket.gaierror("nope")
 
     with pytest.raises(UnsafeURLError, match="could not be resolved"):
@@ -160,7 +162,7 @@ def test_exemption_still_enforces_scheme_and_credentials() -> None:
 
 def test_exempt_host_skips_dns_entirely() -> None:
     """A Docker service name does not resolve from outside the network."""
-    def boom(*args, **kwargs):  # noqa: ANN002, ANN003
+    def boom(*args: Any, **kwargs: Any) -> NoReturn:
         raise AssertionError("DNS must not be attempted for an exempt host")
 
     target = resolve_public_target(

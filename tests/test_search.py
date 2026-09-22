@@ -3,9 +3,9 @@ from __future__ import annotations
 import pytest
 from conftest import response
 
-from webspec.platforms import ParseError
-from webspec.platforms.search import brave, searxng
-from webspec.ports import SearchRequest
+from weft.platforms import ParseError
+from weft.platforms.search import brave, searxng
+from weft.ports import SearchRequest
 
 REQ = SearchRequest(query="b2b saas berlin", language="de", country_code="de", limit=2)
 

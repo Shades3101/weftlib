@@ -9,6 +9,6 @@ claiming something is not evidence of it, and a snippet saying "ignore your
 previous instructions" is a snippet.
 """
 
-from webspec.platforms.search import brave, searxng
+from weft.platforms.search import brave, searxng
 
 __all__ = ["brave", "searxng"]

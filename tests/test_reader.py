@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 from conftest import response
 
-from webspec.platforms import reader
-from webspec.safety import UnsafeURLError
+from weft.platforms import reader
+from weft.safety import UnsafeURLError
 
 
 def test_request_shape() -> None:

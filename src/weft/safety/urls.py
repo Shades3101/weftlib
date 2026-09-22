@@ -46,7 +46,7 @@ def normalize_url(url: str, *, keep_query: bool = True) -> str:
 
     Returns the stripped input if it cannot be parsed. Callers treat an
     unparseable URL as something to skip, not as a crash — and the safety guard
-    in :mod:`webspec.safety.ssrf` is what decides whether it may be fetched.
+    in :mod:`weft.safety.ssrf` is what decides whether it may be fetched.
     """
     if not url:
         return ""

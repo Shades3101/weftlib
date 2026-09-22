@@ -4,7 +4,8 @@ neutral data types that cross them.
 Nothing here executes. These are protocols and dataclasses only.
 """
 
-from webspec.ports.dto import (
+from weft.ports.credentials import ApiKey, BearerToken, Credential, QueryKey
+from weft.ports.dto import (
     FetchedPage,
     FetchMethod,
     HttpRequest,
@@ -13,15 +14,19 @@ from webspec.ports.dto import (
     SearchRequest,
     SearchResponse,
 )
-from webspec.ports.protocols import AsyncTransport, Cache, Renderer, Transport
+from weft.ports.protocols import AsyncTransport, Cache, Renderer, Transport
 
 __all__ = [
+    "ApiKey",
     "AsyncTransport",
+    "BearerToken",
     "Cache",
+    "Credential",
     "FetchMethod",
     "FetchedPage",
     "HttpRequest",
     "HttpResponse",
+    "QueryKey",
     "Renderer",
     "SearchHit",
     "SearchRequest",

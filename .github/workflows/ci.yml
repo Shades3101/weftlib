@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # The live suite is the one thing unit tests cannot cover: an endpoint that
+  # changed shape underneath a fixture. Nothing in a PR triggers that, so it
+  # runs on a schedule instead — the failure arrives on a Monday morning rather
+  # than inside someone's unrelated pull request.
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - name: Tests
+        run: pytest -q
+      - name: Lint
+        run: ruff check .
+      - name: Types
+        run: mypy src tests
+
+  # Proves the claim the README makes: a project can install weft and import it
+  # without weft's own test fixtures, dev dependencies or source tree present.
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build && python -m build --wheel
+      - name: Install the wheel somewhere clean
+        run: |
+          python -m venv /tmp/fresh
+          /tmp/fresh/bin/pip install dist/*.whl
+      - name: Import it from outside the source tree
+        working-directory: /tmp
+        run: |
+          /tmp/fresh/bin/python -c "
+          import weft
+          from weft.platforms import github, youtube, rss, reader
+          from weft.platforms.search import brave, searxng
+          from weft.extract import extract_content
+          print('weft', weft.__version__, 'imports clean')
+          "
+
+  live:
+    # Never on a pull request: a fork's PR would run network calls against
+    # these endpoints, and the secrets would not be there anyway.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    continue-on-error: true # upstream being down is not this repo being broken
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - name: Live endpoint checks
+        env:
+          WEFT_LIVE: "1"
+          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
+        run: pytest -m live -q

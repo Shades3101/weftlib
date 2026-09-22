@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 from conftest import response
 
-from webspec.platforms import ParseError, youtube
+from weft.platforms import ParseError, youtube
+from weft.ports import HttpResponse
 
 
 @pytest.mark.parametrize(
@@ -96,3 +97,33 @@ def test_transcript_error_status_refuses_to_parse() -> None:
         youtube.parse_transcript(
             response("", status=404), video_id="x", language_code="en"
         )
+
+
+class TestEmptyTranscriptBody:
+    """YouTube refuses captions as 200-with-no-body rather than a 4xx.
+
+    Observed live on 2026-09-22 on a video whose tracks the watch page had just
+    listed, so this is a refusal to serve rather than a video without captions.
+    """
+
+    def _empty(self, body: bytes) -> HttpResponse:
+        return response(body, url="https://youtube.com/api/timedtext")
+
+    @pytest.mark.parametrize("body", [b"", b"   ", b"\n"])
+    def test_empty_body_says_what_happened(self, body: bytes) -> None:
+        with pytest.raises(ParseError, match="empty transcript body"):
+            youtube.parse_transcript(self._empty(body), video_id="x", language_code="en")
+
+    def test_it_does_not_masquerade_as_a_parser_bug(self) -> None:
+        """The failure this replaced sent you hunting for a JSON bug that was
+        never there."""
+        with pytest.raises(ParseError) as caught:
+            youtube.parse_transcript(self._empty(b""), video_id="x", language_code="en")
+        assert "valid JSON" not in str(caught.value)
+
+    def test_real_json_still_parses(self) -> None:
+        body = b'{"events":[{"segs":[{"utf8":"hello"}],"tStartMs":0,"dDurationMs":100}]}'
+        transcript = youtube.parse_transcript(
+            self._empty(body), video_id="x", language_code="en"
+        )
+        assert transcript.cues

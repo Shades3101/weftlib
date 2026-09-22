@@ -1,4 +1,4 @@
-"""Neutral data types that cross the seam between webspec and its callers.
+"""Neutral data types that cross the seam between weft and its callers.
 
 Every type here is provider-neutral and vendor-neutral on purpose: nothing
 carries a particular API's response shape, so swapping a search backend or an
@@ -23,10 +23,10 @@ from typing import Any
 
 @dataclass(slots=True, frozen=True)
 class HttpRequest:
-    """A description of a request. webspec builds these; it never sends them.
+    """A description of a request. weft builds these; it never sends them.
 
     ``timeout_seconds`` and ``max_bytes`` are advisory limits the caller is
-    expected to enforce — webspec cannot, having no socket.
+    expected to enforce — weft cannot, having no socket.
     """
 
     url: str
@@ -54,7 +54,7 @@ class HttpRequest:
 
 @dataclass(slots=True)
 class HttpResponse:
-    """What a caller got back, handed to webspec for parsing."""
+    """What a caller got back, handed to weft for parsing."""
 
     url: str
     status: int

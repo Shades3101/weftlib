@@ -1,4 +1,4 @@
-# webspec — Build Progress
+# weft — Build Progress
 
 **Last updated:** 2026-09-15 · **Current phase:** complete — all 6 steps done, both consumers wired
 
@@ -24,11 +24,11 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
 ## Right now
 
-**All six steps are complete.** Both consumers run on `webspec`.
+**All six steps are complete.** Both consumers run on `weft`.
 
 | | Tests | Lint / types |
 |---|---|---|
-| webspec | 102 pass | ruff clean, mypy --strict clean (20 files) |
+| weft | 102 pass | ruff clean, mypy --strict clean (20 files) |
 | ClayHome | 473 pass, 10 skipped | ruff clean |
 | JARVIS | 868 pass, 59 skipped | ruff clean, mypy clean, 4/4 import contracts kept |
 
@@ -86,14 +86,67 @@ deliberately not ported.
 
 ---
 
+## Step 7: rename, credential seam, live tests, distribution
+
+Closing the four gaps the previous section listed.
+
+**Renamed `webspec` → `weft`**, done before either consumer imports it, which
+was the whole reason to do it now. Package, imports, docs and config; 102 tests
+passed before and after.
+
+**A credential seam** (`weft.ports.credentials`). `Credential` is a
+`Protocol` with one method, `apply(request) -> request`, so a caller's existing
+credential type qualifies by shape without importing weft. Three
+implementations ship — `ApiKey`, `BearerToken`, `QueryKey` — with redacted
+`repr` that keeps the *length* visible, because the usual credential bug is an
+empty value or a trailing newline and a fully masked repr hides both. Brave now
+takes either `api_key=` or `auth=`, and raises when given both rather than
+silently preferring one.
+
+Deliberately **still keyless**: the shape is decided, no new authenticated
+platform shipped. There is no refresh, no expiry, no disk — all of which would
+require I/O.
+
+**A live suite** (`tests/live/`), opt-in twice over: the `live` marker is
+deselected by default *and* `WEFT_LIVE=1` must be set. Its transport is
+`urllib` from the standard library — a live suite that reached for httpx would
+quietly weaken "works with any client" into "works with the one we tested".
+Runs weekly in CI, never on pull requests.
+
+**It found a real bug on its first run.** YouTube answers a refused caption
+fetch with **200 and a zero-length body**, on a video whose tracks the watch
+page had *just* listed. weft reported that as `ParseError: did not return valid
+JSON`, sending you hunting for a parser bug that was never there. It now names
+the condition — an IP-based block, needing different egress — and the
+fixture-based suite covers it. This is exactly the class of breakage the old
+"Not yet true" entry predicted, and it took one run to surface.
+
+**Distribution.** `import weft` exports the seam types and pulls in no HTTP
+client and no `selectolax`, asserted in a subprocess by `tests/test_public_api.py`
+so it cannot rot. A CI job builds the wheel, installs it into a clean venv and
+imports it from outside the source tree — the claim the README makes, checked
+rather than asserted. The public name list is pinned, so an accidental rename
+breaks here instead of in a consumer's build.
+
+161 tests, ruff and mypy clean across `src` and `tests`.
+
 ## Not yet true
 
 Stated plainly, because a PROGRESS file that only lists wins is not useful.
 
-- **webspec's own suite still makes no network request.** Every test injects a
-  fake resolver or a fixture. The live checks were one-off scripts, recorded
-  above but not automated — nothing will catch it when an endpoint's shape
-  changes.
-- ClayHome and JARVIS are untouched; neither depends on `webspec` yet.
-- The name `webspec` is still the placeholder from the plan. Renaming is
-  cheapest now, before either consumer imports it.
+- **The rename broke both consumers, and they are not yet repaired.** The
+  previous "Not yet true" entry claimed neither depended on this library. That
+  was stale: ClayHome imports it in 6 places via `path = "../webspec"`, and
+  JARVIS in 6 more via a pinned git rev. Both still say `webspec`.
+  JARVIS is pinned to `1d13ff0` so it keeps working until someone bumps the
+  rev; ClayHome breaks on its next install. Renaming *was* right to do before
+  wider adoption, but it was not free, and the repair is outstanding.
+- **The live suite cannot see what it is blocked from.** YouTube transcripts
+  skip from this machine and will skip from GitHub Actions too — datacentre IPs
+  are exactly what YouTube refuses. The weekly run therefore proves less about
+  that path than about the others, and a skip is easy to stop reading.
+- **Brave and SearXNG go unchecked in CI** without a key and a reachable
+  instance. Both skip cleanly, which is honest, but an untested parser is
+  untested however politely it declines.
+- **The repository is still called `webspec`** on GitHub, though the package is
+  `weft`. Cosmetic, and cheap to fix, but confusing until it is.

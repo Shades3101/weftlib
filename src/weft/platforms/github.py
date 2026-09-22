@@ -5,7 +5,7 @@ is the real constraint on using this at any volume — :func:`rate_limit_of`
 reads the remaining budget from any response so a caller can back off before it
 is refused rather than after.
 
-A token raises the limit to 5,000/hour. webspec does not hold one: pass it via
+A token raises the limit to 5,000/hour. weft does not hold one: pass it via
 ``token=`` and the caller decides where it came from.
 """
 
@@ -15,8 +15,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from webspec.platforms._shared import DEFAULT_USER_AGENT, json_body, require_ok
-from webspec.ports.dto import HttpRequest, HttpResponse
+from weft.platforms._shared import DEFAULT_USER_AGENT, json_body, require_ok
+from weft.ports.dto import HttpRequest, HttpResponse
 
 API_ROOT = "https://api.github.com"
 

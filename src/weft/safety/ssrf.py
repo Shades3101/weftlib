@@ -77,7 +77,7 @@ def _literal_ip(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Address | No
         pass
     # Imported inside the function, not at module scope. JARVIS bans a tool
     # from importing `socket` at all, and enforces it by parsing the source.
-    # webspec has no ambient authority to begin with — it owns no transport —
+    # weft has no ambient authority to begin with — it owns no transport —
     # but a module-level import would make a reader check that claim rather
     # than see it. The cost is one dict lookup per malformed host.
     import socket

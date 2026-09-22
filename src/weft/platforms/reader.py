@@ -22,10 +22,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from webspec.extract.antibot import is_challenge_page
-from webspec.platforms._shared import DEFAULT_USER_AGENT, ParseError
-from webspec.ports.dto import FetchedPage, FetchMethod, HttpRequest, HttpResponse
-from webspec.safety.ssrf import UnsafeURLError, validate_url_shape
+from weft.extract.antibot import is_challenge_page
+from weft.platforms._shared import DEFAULT_USER_AGENT, ParseError
+from weft.ports.dto import FetchedPage, FetchMethod, HttpRequest, HttpResponse
+from weft.safety.ssrf import UnsafeURLError, validate_url_shape
 
 ENDPOINT = "https://r.jina.ai"
 
@@ -47,7 +47,7 @@ def reader_request(
     ``r.jina.ai``, and would happily pass a request asking Jina to fetch
     ``http://169.254.169.254/`` on its behalf.
 
-    An ``api_key`` raises the rate limit. webspec does not hold one.
+    An ``api_key`` raises the rate limit. weft does not hold one.
     """
     try:
         validate_url_shape(url)

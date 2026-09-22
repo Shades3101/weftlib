@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from conftest import response
 
-from webspec.platforms import ParseError, rss
+from weft.platforms import ParseError, rss
 
 RSS_FEED = """<?xml version="1.0"?>
 <rss version="2.0"><channel>

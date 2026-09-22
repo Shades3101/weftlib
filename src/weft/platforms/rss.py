@@ -16,12 +16,12 @@ from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from xml.etree import ElementTree
 
-from webspec.platforms._shared import DEFAULT_USER_AGENT, ParseError, require_ok
-from webspec.ports.dto import HttpRequest, HttpResponse
+from weft.platforms._shared import DEFAULT_USER_AGENT, ParseError, require_ok
+from weft.ports.dto import HttpRequest, HttpResponse
 
 _ATOM = "{http://www.w3.org/2005/Atom}"
 
-#: Caps on a hostile or merely enormous feed. webspec cannot bound the download
+#: Caps on a hostile or merely enormous feed. weft cannot bound the download
 #: — it has no socket — but it can refuse to build a million objects from it.
 MAX_ENTRIES = 500
 

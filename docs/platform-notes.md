@@ -7,15 +7,15 @@ marked ✅ / ❌ and dated, because this kind of knowledge goes stale.
 
 Agent-Reach's endpoint research is the main thing worth keeping from it. Its
 code is not: it is an installer for 13 third-party CLIs, and its SSRF guard is
-weaker than the one in `webspec.safety` (literal-IP parsing only, no DNS).
+weaker than the one in `weft.safety` (literal-IP parsing only, no DNS).
 
 ---
 
-## Implemented in webspec
+## Implemented in weft
 
 ### Generic web pages
 
-Three rungs, cheapest first. `webspec.extract.should_escalate` decides between
+Three rungs, cheapest first. `weft.extract.should_escalate` decides between
 them; it escalates on a JavaScript shell or a bot challenge and on nothing else.
 
 | Rung | Method | Cost | Notes |
@@ -26,7 +26,7 @@ them; it escalates on a JavaScript shell or a bot challenge and on nothing else.
 
 Jina Reader answers **200 with an explanatory body** when the upstream page
 blocked *it*. Parsed naively that is a successful fetch of nothing.
-`webspec.platforms.reader.parse_reader` detects it and returns an error.
+`weft.platforms.reader.parse_reader` detects it and returns an error.
 
 ### GitHub — ✅ live-verified 2026-09-15
 
@@ -72,7 +72,7 @@ provider layer.
 
 Getting past that needs cookies, a PO token, and continuous maintenance as the
 checks change — which is `yt-dlp`'s entire job. **For transcripts at any
-volume, shell out to yt-dlp.** webspec's module exists for one transcript from
+volume, shell out to yt-dlp.** weft's module exists for one transcript from
 an unblocked IP; it fails loudly (a 429 raises rather than returning an empty
 tuple) so "blocked" is never recorded as "no captions".
 
