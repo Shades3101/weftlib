@@ -1,0 +1,64 @@
+name: Release
+
+# Dormant until you push a version tag. Nothing here runs on an ordinary push,
+# so merging this file publishes nothing.
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# One-time setup on pypi.org before the first release: add a Trusted Publisher
+# for this repository (Your projects -> Publishing), with workflow `release.yml`
+# and environment `pypi`. That exchanges a short-lived GitHub identity for an
+# upload token, so no API token is ever stored in this repository.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Publishing something that does not pass its own tests is how a broken
+      # release reaches people who then have to be told to downgrade.
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+      - run: ruff check .
+      - run: mypy src tests
+
+      - name: Build sdist and wheel
+        run: |
+          pip install build twine
+          python -m build
+          twine check dist/*
+
+      - name: Refuse a tag that disagrees with the version
+        run: |
+          tagged="${GITHUB_REF_NAME#v}"
+          declared=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          if [ "$tagged" != "$declared" ]; then
+            echo "tag v$tagged does not match pyproject version $declared" >&2
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write # Trusted Publishing; no stored token
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

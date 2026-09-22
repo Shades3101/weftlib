@@ -1,6 +1,10 @@
 [project]
-name = "weft"
+name = "weftlib"
 version = "0.1.0"
+# The distribution is `weftlib` because `weft` was taken on PyPI by an
+# unrelated agent-task library. The import name stays `weft` — the two do not
+# have to match, and changing the import would churn every consumer for a
+# packaging detail. Install `weftlib`, write `import weft`.
 description = "Web access as pure logic: build requests, parse responses. No I/O."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -27,6 +31,11 @@ dev = [
     "ruff>=0.8",
     "mypy>=1.12",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Shades3101/webspec"
+Repository = "https://github.com/Shades3101/webspec"
+Issues = "https://github.com/Shades3101/webspec/issues"
 
 [build-system]
 requires = ["hatchling"]

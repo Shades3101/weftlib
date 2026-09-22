@@ -65,13 +65,38 @@ weft has no dependency on any HTTP client, async framework or validation
 library, which is what lets it drop into an existing project without a version
 conflict. Its one runtime dependency is `selectolax`, used by `weft.extract`.
 
+The distribution is **`weftlib`**; the import is **`weft`**. They differ because
+`weft` was already taken on PyPI by an unrelated project, and churning every
+consumer's import statements over a packaging detail would be a poor trade.
+Install one, write the other:
+
+```bash
+pip install weftlib          # not yet published; see below
+```
+
+```txt
+# requirements.txt
+weftlib>=0.1.0
+```
+
+```toml
+# pyproject.toml
+dependencies = ["weftlib>=0.1.0"]
+```
+
+```python
+import weft                  # note: weft, not weftlib
+```
+
+**Until it is published**, install from git — same package, same import:
+
 ```bash
 pip install git+https://github.com/Shades3101/webspec.git
 ```
 
 ```toml
 # pyproject.toml — from a checkout next door
-weft = { path = "../weft", editable = true }
+weftlib = { path = "../webspec", editable = true }
 ```
 
 Python 3.12. The upper pin (`<3.13`) matches JARVIS; nothing here requires it.
