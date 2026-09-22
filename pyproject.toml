@@ -33,9 +33,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Shades3101/webspec"
-Repository = "https://github.com/Shades3101/webspec"
-Issues = "https://github.com/Shades3101/webspec/issues"
+Homepage = "https://github.com/Shades3101/weftlib"
+Repository = "https://github.com/Shades3101/weftlib"
+Issues = "https://github.com/Shades3101/weftlib/issues"
 
 [build-system]
 requires = ["hatchling"]

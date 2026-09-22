@@ -91,7 +91,7 @@ import weft                  # note: weft, not weftlib
 **Until it is published**, install from git — same package, same import:
 
 ```bash
-pip install git+https://github.com/Shades3101/webspec.git
+pip install git+https://github.com/Shades3101/weftlib.git
 ```
 
 ```toml
